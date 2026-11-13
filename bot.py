@@ -1,11 +1,12 @@
 import json
+import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 app = FastAPI()
 
-# السماح للمتصفح بالاتصال بدون مشاكل الحماية (CORS)
+# السماح بالاتصالات من أي مكان (باش السيت والإضافة يقدرو يتصلو بلا مشاكل)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,38 +15,34 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# قائمة نخبو فيها قاع لي راهم مكونيكتيين (السيت + الإضافات تاع كروم)
+# قائمة باش نشدو فيها ڨاع الإضافات لي راهم مكونيكتيين
 active_connections = []
 
-@app.websocket("/")
+# هذي زدتهالك باش كي تدخل للرابط تاع Render يكتبلك بلي راه خدام
+@app.get("/")
+def read_root():
+    return {"status": "Quantum Nexus Server is LIVE and Running!", "websocket_url": "wss://quotex100.onrender.com/ws"}
+
+# مسار الـ WebSocket لي تتصل بيه الإضافة والسيت
+@app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     active_connections.append(websocket)
-    print(f"✅ Nouvelle connexion établie ! (Clients connectés: {len(active_connections)})")
-    
+    print("✅ Nouvelle connexion Web ou Extension !")
     try:
         while True:
-            # نستقبلو الإشارة (Signal) من السيت (index.html)
+            # استقبال السيغنال من السيت
             data = await websocket.receive_text()
-            print(f"📩 Signal reçu du Dashboard: {data}")
+            print(f"Message reçu: {data}")
             
-            # نبعثو هاد الإشارة للإضافات تاع كروم باش يكليكو
+            # إرسال السيغنال لجميع الإضافات المتصلة باش ينفذو الصفقة
             for connection in active_connections:
-                if connection != websocket: # نبعثو للكل ما عدا المرسل
-                    try:
-                        await connection.send_text(data)
-                    except:
-                        pass
-            print(f"🚀 Signal relayé aux extensions !")
-            
+                if connection != websocket:
+                    await connection.send_text(data)
     except WebSocketDisconnect:
         active_connections.remove(websocket)
-        print(f"❌ Connexion fermée. (Clients connectés: {len(active_connections)})")
+        print("❌ Connexion perdue.")
 
 if __name__ == "__main__":
-    print("="*50)
-    print("🌟 QUANTUM NEXUS - CORE SERVER 🌟")
-    print("="*50)
-    print("🟢 En attente de connexions sur ws://localhost:8765")
-    # تشغيل السيرفر على البورت 8765
-    uvicorn.run(app, host="0.0.0.0", port=8765)
+    print("🚀 Serveur démarré !")
+    uvicorn.run(app, host="0.0.0.0", port=8000)
