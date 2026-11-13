@@ -6,11 +6,12 @@ import uvicorn
 
 app = FastAPI()
 
-# التصحيح هنا: رديناها False باش ما يبلوكيش الإضافة تاع الكروم
+# هادا هو الحل الجذري: allow_origin_regex=".*" يقبل إضافات ڨوڨل كروم ديريكت
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False, 
+    allow_origin_regex=".*",  # <--- السطر السحري 
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -23,7 +24,6 @@ def read_root():
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    # قبول الاتصال ديريكت
     await websocket.accept()
     active_connections.append(websocket)
     print("✅ Nouvelle connexion Web ou Extension !")
@@ -37,6 +37,3 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         active_connections.remove(websocket)
         print("❌ Connexion perdue.")
-if __name__ == "__main__":
-    print("🚀 Serveur démarré !")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
